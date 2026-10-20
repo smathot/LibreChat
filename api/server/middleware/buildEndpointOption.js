@@ -174,6 +174,30 @@ async function buildEndpointOption(req, res, next) {
     }
   }
 
+  /**
+   * Deployment-wide prefix (`customPromptPrefix` in librechat.yaml), prepended
+   * to the resolved `promptPrefix` of regular (non-agents) endpoint chats.
+   * Only the model-bound payload for this turn changes — the conversation record
+   * keeps the user's own `promptPrefix` untouched. Runs after model-spec presets
+   * are applied, so the deployment prefix also wins over spec prompts.
+   *
+   * Note: `isAgents` (baseUrl-based) is true for every chat routed through
+   * /api/agents/chat, including regular endpoints; `isAgentsEndpoint(endpoint)`
+   * is what distinguishes an agents chat here.
+   */
+  const customPromptPrefix = appConfig?.config?.customPromptPrefix;
+  if (
+    !isAgentsEndpoint(endpoint) &&
+    typeof customPromptPrefix === 'string' &&
+    customPromptPrefix.trim().length > 0
+  ) {
+    const promptPrefix = parsedBody.promptPrefix;
+    parsedBody.promptPrefix =
+      typeof promptPrefix === 'string' && promptPrefix.trim().length > 0
+        ? `${customPromptPrefix}\n\n${promptPrefix}`
+        : customPromptPrefix;
+  }
+
   try {
     const builder = isAgents
       ? (...args) => buildFunction[EModelEndpoint.agents](req, ...args)

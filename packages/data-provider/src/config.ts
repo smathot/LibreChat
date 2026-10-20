@@ -3840,6 +3840,13 @@ export type TToolCallPreviewsConfig = z.infer<typeof toolCallPreviewsConfigSchem
 
 export const configSchema = z.object({
   version: z.string(),
+  /**
+   * Deployment-wide system-prompt text prepended to the conversation
+   * `promptPrefix` on regular (non-agents) endpoint chats; see
+   * `api/server/middleware/buildEndpointOption.js`. Optional. Template
+   * variables such as `{{current_user}}` are not resolved.
+   */
+  customPromptPrefix: z.string().optional(),
   permissions: z.object({ maxWriteAttempts: permissionWriteAttemptsSchema }).optional(),
   cache: z.boolean().default(true),
   projects: chatProjectsConfigSchema,
