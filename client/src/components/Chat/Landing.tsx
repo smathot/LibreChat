@@ -148,16 +148,7 @@ export default function Landing({ centerFormOnLanding }: { centerFormOnLanding: 
                 <HatGlasses className="text-text-primary h-2/3 w-2/3" aria-hidden="true" />
               </div>
             ) : (
-              <ConvoIcon
-                agentsMap={agentsMap}
-                assistantMap={assistantMap}
-                conversation={conversation}
-                endpointsConfig={endpointsConfig}
-                containerClassName={containerClassName}
-                context="landing"
-                className="text-text-primary h-2/3 w-2/3"
-                size={41}
-              />
+              <img src="/assets/sigmund.png" />
             )}
             {startupConfig?.showBirthdayIcon && (
               <TooltipAnchor
