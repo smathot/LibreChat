@@ -42,6 +42,9 @@ export async function loadDefaultInterface({
     termsOfService: interfaceConfig?.termsOfService ?? defaults.termsOfService,
     mcpServers: interfaceConfig?.mcpServers ?? defaults.mcpServers,
     customWelcome: interfaceConfig?.customWelcome ?? defaults.customWelcome,
+    /** Deployment-defined landing-page description text; rendered by Landing.tsx
+     *  under the greeting. No schema default — omit to show no description. */
+    customLandingDescription: interfaceConfig?.customLandingDescription,
     autoSubmitFromUrl: interfaceConfig?.autoSubmitFromUrl ?? defaults.autoSubmitFromUrl,
     buildInfo: interfaceConfig?.buildInfo ?? defaults.buildInfo,
     contextUsage: interfaceConfig?.contextUsage ?? defaults.contextUsage,

@@ -2639,6 +2639,7 @@ export const isForcedTemporaryRetention = (mode?: RetentionMode | null): boolean
 export const interfaceSchema = z
   .object({
     theme: deploymentThemeSchema.optional(),
+    customLandingDescription: z.string().optional(),
     privacyPolicy: z
       .object({
         externalUrl: z.string().optional(),
@@ -3846,7 +3847,7 @@ export const configSchema = z.object({
    * `api/server/middleware/buildEndpointOption.js`. Optional. Template
    * variables such as `{{current_user}}` are not resolved.
    */
-  customPromptPrefix: z.string().optional(),
+  customPromptPrefix: z.string().optional(),  
   permissions: z.object({ maxWriteAttempts: permissionWriteAttemptsSchema }).optional(),
   cache: z.boolean().default(true),
   projects: chatProjectsConfigSchema,

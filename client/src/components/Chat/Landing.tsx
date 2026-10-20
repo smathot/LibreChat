@@ -80,9 +80,10 @@ export default function Landing({ centerFormOnLanding }: { centerFormOnLanding: 
   const brandedSpecLabel = modelSpec?.showOnLanding ? modelSpec.label : '';
   const brandedSpecDescription = (modelSpec?.showOnLanding && modelSpec.description) || '';
   const name = isTemporary ? '' : (entity?.name ?? brandedSpecLabel);
-  const description = isTemporary
-    ? localize('com_ui_temporary_description')
-    : ((entity?.description || brandedSpecDescription || conversation?.greeting) ?? '');
+  const description =
+    typeof startupConfig?.interface?.customLandingDescription === 'string'
+      ? startupConfig.interface.customLandingDescription
+      : undefined;
   const descriptionIsHTML = isHtmlDescription(description);
   const selectedAgent =
     isAgent && conversation?.agent_id != null ? agentsMap?.[conversation.agent_id] : undefined;
