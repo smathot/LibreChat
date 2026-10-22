@@ -45,6 +45,13 @@ export async function loadDefaultInterface({
     /** Deployment-defined landing-page description text; rendered by Landing.tsx
      *  under the greeting. No schema default — omit to show no description. */
     customLandingDescription: interfaceConfig?.customLandingDescription,
+    /** Deployment-defined subtitle per endpoint, rendered under the endpoint label
+     *  in the model selector menu. No default — unlisted endpoints show none. */
+    endpointDescription: interfaceConfig?.endpointDescription,
+    /** Deployment-defined subtitle per model (keyed by model id), rendered
+     *  under the model name in the model selector menu. No default —
+     *  unlisted models show none. */
+    modelDescription: interfaceConfig?.modelDescription,
     autoSubmitFromUrl: interfaceConfig?.autoSubmitFromUrl ?? defaults.autoSubmitFromUrl,
     buildInfo: interfaceConfig?.buildInfo ?? defaults.buildInfo,
     contextUsage: interfaceConfig?.contextUsage ?? defaults.contextUsage,

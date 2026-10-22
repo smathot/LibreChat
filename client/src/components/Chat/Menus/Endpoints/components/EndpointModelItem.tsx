@@ -7,6 +7,7 @@ import { isAgentsEndpoint, isAssistantsEndpoint } from 'librechat-data-provider'
 import type { Endpoint } from '~/common';
 import { useModelSelectorContext } from '../ModelSelectorContext';
 import { CustomMenuItem as MenuItem } from '../CustomMenu';
+import MenuDescription from './MenuDescription';
 import useActiveItem from '../useActiveItem';
 import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';
@@ -62,7 +63,7 @@ function EndpointModelItemComponent({
     endpoint.assistantNames?.[modelId]
   ) {
     modelName = endpoint.assistantNames[modelId];
-  }
+  }  
 
   const handleFavoriteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -108,10 +109,11 @@ function EndpointModelItemComponent({
       aria-setsize={setSize}
       className="group flex w-full cursor-pointer items-center justify-between rounded-lg px-2 text-sm"
     >
-      <div className="flex w-full min-w-0 items-center gap-2 px-1 py-1">
-        {renderAvatar()}
-        <span className="truncate">{modelName}</span>
-        {isGlobal && <EarthIcon className="text-surface-submit ml-1 size-4" />}
+      <div className="flex min-w-0 flex-col gap-1">
+        <span className="truncate text-left">{modelName}</span>
+        <MenuDescription
+          description={endpoint.modelDescriptions?.[modelId ?? '']}
+        />
       </div>
       <button
         type="button"

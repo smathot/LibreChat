@@ -2852,6 +2852,20 @@ export const interfaceSchema = z
         }),
       ])
       .optional(),
+    /**
+     * Deployment-defined subtitles for the endpoint selector menu, keyed by
+     * endpoint name as shown in the selector (`endpointsMenu`). Rendered under
+     * the endpoint label. HTML values are sanitized by the client renderer
+     * (SpecDescription). Unlisted endpoints show no subtitle.
+     */
+    endpointDescription: z.record(z.string()).optional(),
+    /**
+     * Deployment-defined subtitles for model entries in the endpoint selector,
+     * keyed by model id. Rendered under the model name. HTML values are
+     * sanitized by the client renderer (MenuDescription). Unlisted models show
+     * no subtitle.
+     */
+    modelDescription: z.record(z.string()).optional(),
     /** Client confirmation window for a steer escalation arm, in milliseconds. */
     steerArmConfirmationTimeoutMs: z
       .number()
@@ -4180,6 +4194,7 @@ export enum FetchTokenConfig {
 }
 
 export const defaultEndpoints: EModelEndpoint[] = [
+  EModelEndpoint.custom,
   EModelEndpoint.openAI,
   EModelEndpoint.assistants,
   EModelEndpoint.azureAssistants,
@@ -4187,7 +4202,6 @@ export const defaultEndpoints: EModelEndpoint[] = [
   EModelEndpoint.agents,
   EModelEndpoint.google,
   EModelEndpoint.anthropic,
-  EModelEndpoint.custom,
   EModelEndpoint.bedrock,
 ];
 

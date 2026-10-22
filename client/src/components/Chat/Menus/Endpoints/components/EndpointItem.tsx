@@ -13,6 +13,7 @@ import { useModelSelectorContext } from '../ModelSelectorContext';
 import VirtualizedModelList from './VirtualizedModelList';
 import { useFavorites, useLocalize } from '~/hooks';
 import { ModelSpecItem } from './ModelSpecItem';
+import MenuDescription from './MenuDescription';
 import { cn } from '~/utils';
 
 interface EndpointItemProps {
@@ -279,7 +280,10 @@ export function EndpointItem({ endpoint, endpointIndex }: EndpointItemProps) {
           {endpoint.icon}
         </div>
       )}
-      <span className="truncate text-left">{endpoint.label}</span>
+      <div className="flex min-w-0 flex-col gap-1">
+        <span className="truncate text-left">{endpoint.label}</span>
+        <MenuDescription description={endpoint.description} />
+      </div>
     </div>
   );
 

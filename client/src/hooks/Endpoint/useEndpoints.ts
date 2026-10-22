@@ -57,6 +57,36 @@ const createEndpointIcon = (
   });
 };
 
+/**
+ * Resolves a deployment-authored menu subtitle from a config record, matching
+ * the endpoint's selector key and its display label, each case-insensitively —
+ * a yaml key written as `Mistral` resolves for the normalized `mistral` key and
+ * vice versa.
+ */
+function lookupConfigText(
+  map: Record<string, string>,
+  ...keys: (string | undefined)[]
+): string | undefined {
+  for (const key of keys) {
+    if (key != null && typeof map[key] === 'string') {
+      return map[key];
+    }
+  }
+  const lowerCaseMap = new Map(
+    Object.entries(map).map(([key, value]) => [key.toLowerCase(), value]),
+  );
+  for (const key of keys) {
+    if (key == null) {
+      continue;
+    }
+    const value = lowerCaseMap.get(key.toLowerCase());
+    if (typeof value === 'string') {
+      return value;
+    }
+  }
+  return undefined;
+}
+
 export const useEndpoints = ({
   agents,
   assistantsMap,
@@ -71,6 +101,10 @@ export const useEndpoints = ({
   const modelsQuery = useGetModelsQuery();
   const { data: endpoints = [] } = useGetEndpointsQuery({ select: mapEndpoints });
   const interfaceConfig = startupConfig?.interface ?? defaultInterface;
+  /** Deployment-defined menu subtitles; read from the startup config directly
+   *  because these fields carry no schema defaults. */
+  const endpointDescriptions = startupConfig?.interface?.endpointDescription;
+  const modelDescriptions = startupConfig?.interface?.modelDescription;
   const includedEndpoints = useMemo(
     () => new Set(startupConfig?.modelSpecs?.addedEndpoints ?? []),
     [startupConfig?.modelSpecs?.addedEndpoints],
@@ -137,6 +171,16 @@ export const useEndpoints = ({
         hasModels,
         icon: createEndpointIcon(ep, resolveProviderIcon({ endpoint: ep, endpointsConfig })),
       };
+
+      if (endpointDescriptions) {
+        const description = lookupConfigText(endpointDescriptions, ep, result.label);
+        if (description != null) {
+          result.description = description;
+        }
+      }
+      if (modelDescriptions) {
+        result.modelDescriptions = modelDescriptions;
+      }
 
       if (ep === EModelEndpoint.agents && showAgentMarketplace) {
         result.showMarketplace = true;
@@ -219,6 +263,8 @@ export const useEndpoints = ({
     agents,
     assistants,
     azureAssistants,
+    endpointDescriptions,
+    modelDescriptions,
     endpointsConfig,
     filteredEndpoints,
     modelsQuery.data,
