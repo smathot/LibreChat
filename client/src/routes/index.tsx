@@ -8,6 +8,7 @@ import {
   TwoFactorScreen,
   TwoFactorSetupScreen,
   RequestPasswordReset,
+  ExternalLogout,
 } from '~/components/Auth';
 import { OAuthSuccess, OAuthError } from '~/components/OAuth';
 import { AuthContextProvider } from '~/hooks/AuthContext';
@@ -103,6 +104,11 @@ export const router = createBrowserRouter(
     {
       path: 'verify',
       element: <VerifyEmail />,
+      errorElement: <RouteErrorBoundary />,
+    },
+    {
+      path: 'external-logout',
+      element: <ExternalLogout />,
       errorElement: <RouteErrorBoundary />,
     },
     {

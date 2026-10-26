@@ -39,6 +39,7 @@ const {
   finalize2FASetup,
 } = require('~/server/controllers/auth/TwoFactorAuthController');
 const { logoutController } = require('~/server/controllers/auth/LogoutController');
+const { externalLogoutController } = require('~/server/controllers/auth/ExternalLogoutController');
 const { loginController } = require('~/server/controllers/auth/LoginController');
 const { findBalanceByUser, upsertBalanceFields } = require('~/models');
 const { getAppConfig } = require('~/server/services/Config');
@@ -67,6 +68,7 @@ const getCloudFrontAuthCookieRefreshResult = (req, res) => {
 const ldapAuth = !!process.env.LDAP_URL && !!process.env.LDAP_USER_SEARCH_BASE;
 //Local
 router.post('/logout', middleware.requireJwtAuth, logoutController);
+router.post('/logout/external', externalLogoutController);
 router.post(
   '/login',
   middleware.logHeaders,
