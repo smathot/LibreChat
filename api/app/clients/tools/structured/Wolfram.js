@@ -1,6 +1,7 @@
 /* eslint-disable no-useless-escape */
 const axios = require('axios');
 const { logger } = require('@librechat/data-schemas');
+const { toolRequestBudget } = require('@librechat/api');
 const { Tool } = require('@librechat/agents/langchain/tools');
 
 const wolframJsonSchema = {
@@ -19,6 +20,7 @@ class WolframAlphaAPI extends Tool {
     super();
     /* Used to initialize the Tool without necessary variables. */
     this.override = fields.override ?? false;
+    this.timeouts = fields.timeouts;
 
     this.name = 'wolfram';
     this.apiKey = fields.WOLFRAM_APP_ID || this.getAppId();
@@ -60,7 +62,10 @@ class WolframAlphaAPI extends Tool {
 
   async fetchRawText(url) {
     try {
-      const response = await axios.get(url, { responseType: 'text' });
+      const response = await axios.get(url, {
+        responseType: 'text',
+        ...toolRequestBudget(this.timeouts),
+      });
       return response.data;
     } catch (error) {
       logger.error('[WolframAlphaAPI] Error fetching raw text:', error);

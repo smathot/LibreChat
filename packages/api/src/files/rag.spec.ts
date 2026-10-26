@@ -44,6 +44,17 @@ describe('deleteRagFile', () => {
   });
 
   describe('when file is embedded and RAG_API_URL is configured', () => {
+    it('bounds the request by the default RAG budget', async () => {
+      mockedAxios.delete.mockResolvedValueOnce({ status: 200 });
+
+      await deleteRagFile({ userId: 'user123', file: { file_id: 'file-123', embedded: true } });
+
+      expect(mockedAxios.delete).toHaveBeenCalledWith(
+        'http://localhost:8000/documents',
+        expect.objectContaining({ timeout: 30_000, signal: expect.any(AbortSignal) }),
+      );
+    });
+
     it('should delete the document from RAG API successfully', async () => {
       const file = { file_id: 'file-123', embedded: true };
       mockedAxios.delete.mockResolvedValueOnce({ status: 200 });
@@ -59,6 +70,9 @@ describe('deleteRagFile', () => {
           accept: 'application/json',
         },
         data: ['file-123'],
+        timeout: 30_000,
+        timeoutErrorMessage: expect.stringContaining('timeouts.ragMs'),
+        signal: expect.any(AbortSignal),
       });
       expect(mockedLogger.debug).toHaveBeenCalledWith(
         '[deleteRagFile] Successfully deleted document file-123 from RAG API',
@@ -251,6 +265,15 @@ describe('createVectorFileDeleter receipts', () => {
     expect(mockedAxios.delete).toHaveBeenCalledWith(
       'https://rag.example/documents',
       expect.objectContaining({ data: ['retained-file'] }),
+    );
+  });
+
+  it('bounds the delete by the configured RAG budget', async () => {
+    mockedAxios.delete.mockResolvedValueOnce({ status: 200 });
+    await setup()({ ...req, config: { timeouts: { ragMs: 1_234 } } }, file);
+    expect(mockedAxios.delete).toHaveBeenCalledWith(
+      'https://rag.example/documents',
+      expect.objectContaining({ timeout: 1_234, signal: expect.any(AbortSignal) }),
     );
   });
 

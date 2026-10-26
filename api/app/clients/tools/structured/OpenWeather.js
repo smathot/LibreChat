@@ -1,5 +1,5 @@
 const fetch = require('node-fetch');
-const { formatToolError } = require('@librechat/api');
+const { formatToolError, toolRequestBudget } = require('@librechat/api');
 const { Tool } = require('@librechat/agents/langchain/tools');
 const { getEnvironmentVariable } = require('@librechat/agents/langchain/utils/env');
 
@@ -122,6 +122,7 @@ class OpenWeather extends Tool {
     this.envVar = 'OPENWEATHER_API_KEY';
     this.override = fields.override ?? false;
     this.apiKey = fields[this.envVar] ?? this.getApiKey();
+    this.timeouts = fields.timeouts;
   }
 
   getApiKey() {
@@ -136,7 +137,7 @@ class OpenWeather extends Tool {
     const geocodeUrl = `https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(
       city,
     )}&limit=1&appid=${this.apiKey}`;
-    const res = await fetch(geocodeUrl);
+    const res = await fetch(geocodeUrl, { signal: toolRequestBudget(this.timeouts).signal });
     const data = await res.json();
     if (!res.ok || !Array.isArray(data) || data.length === 0) {
       throw new Error(`Could not find coordinates for city: ${city}`);
@@ -337,7 +338,7 @@ class OpenWeather extends Tool {
       }
 
       const url = `${baseUrl}${endpoint}?${params.toString()}`;
-      const response = await fetch(url);
+      const response = await fetch(url, { signal: toolRequestBudget(this.timeouts).signal });
       const json = await response.json();
       if (!response.ok) {
         return `Error: OpenWeather API request failed with status ${response.status}: ${

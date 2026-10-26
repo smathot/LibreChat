@@ -1,6 +1,12 @@
 import axios from 'axios';
 import { logger } from '@librechat/data-schemas';
+import type { AppConfig } from '@librechat/data-schemas';
 import type { AxiosInstance } from 'axios';
+import {
+  outboundRequestBudget,
+  getOutboundTimeoutMs,
+  DEFAULT_OUTBOUND_TIMEOUTS_MS,
+} from '~/utils/timeouts';
 import { generateShortLivedToken } from '~/crypto/jwt';
 import { isMissingStorageError } from './storage';
 
@@ -44,6 +50,7 @@ export async function deleteRagFile({ userId, file }: DeleteRagFileParams): Prom
         accept: 'application/json',
       },
       data: [file.file_id],
+      ...outboundRequestBudget(DEFAULT_OUTBOUND_TIMEOUTS_MS.ragMs, 'ragMs'),
     });
     logger.debug(`[deleteRagFile] Successfully deleted document ${file.file_id} from RAG API`);
     return true;
@@ -121,7 +128,7 @@ export function createVectorFileDeleter({
   httpClient: Pick<AxiosInstance, 'delete'>;
   generateToken: (userId: string) => string;
 }): (
-  req: { user: { id: string } },
+  req: { user: { id: string }; config?: Pick<AppConfig, 'timeouts'> },
   file: { file_id: string; embedded?: boolean },
 ) => Promise<{ deleted: true } | undefined> {
   return async (req, file) => {
@@ -134,6 +141,7 @@ export function createVectorFileDeleter({
           accept: 'application/json',
         },
         data: [file.file_id],
+        ...outboundRequestBudget(getOutboundTimeoutMs(req.config, 'ragMs'), 'ragMs'),
       });
     } catch (error) {
       if (!isMissingStorageError(error)) throw error;
