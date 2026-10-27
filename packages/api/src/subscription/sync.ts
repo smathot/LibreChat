@@ -1,23 +1,22 @@
 import { z } from 'zod';
-import { createHash, timingSafeEqual } from 'node:crypto';
 import { runAsSystem } from '@librechat/data-schemas';
+import { createHash, timingSafeEqual } from 'node:crypto';
 import type { NextFunction, Request, Response } from 'express';
 import type { SubscriptionStateUser } from './state';
+import type { SubscriptionUserLookupDeps } from './resolve';
+import {
+  exactlyOneIdentifierMessage,
+  hasExactlyOneSubscriptionIdentifier,
+  resolveSubscriptionUserId,
+  subscriptionIdentifierSchema,
+} from './resolve';
 import { isSubscriptionActive } from './state';
 
-/** MongoDB ObjectId as stored in the users collection. */
-const USER_ID_PATTERN = /^[a-f\d]{24}$/i;
-const IDENTIFIER_FIELDS = ['email', 'userId'] as const;
-
 /**
- * Hand-written rather than `z.infer<...>`: `--isolatedDeclarations` requires exported
- * declarations to be typable without inference, and a Zod chain is exactly the kind of
- * deeply-inferred type that rule rejects (TS9010). Annotating the schema below with
- * this type also rules out `z.infer<typeof schema>`, which would be circular.
- * Keep this in sync with the object shape; the schema stays the runtime source of truth.
+ * The body POST /api/subscription/sync accepts. Declared rather than `z.infer`-ed so the
+ * schema below can carry the explicit type annotation --isolatedDeclarations requires.
  */
 export interface SubscriptionSyncBody {
-  /** Stored lowercase; `findUser` normalizes the lookup criteria. */
   email?: string;
   userId?: string;
   /** Instant the subscription runs until (ISO 8601, UTC `Z`). `null` deactivates. */
@@ -28,29 +27,20 @@ export interface SubscriptionSyncBody {
   plan?: string;
 }
 
-/** Annotated (widened to `z.ZodType`) so the declaration can be emitted under `--isolatedDeclarations`. */
-export const subscriptionSyncBodySchema: z.ZodType<SubscriptionSyncBody> = z
-  .object({
-    /** Stored lowercase; `findUser` normalizes the lookup criteria. */
-    email: z.string().trim().min(3).max(320).email().optional(),
-    userId: z.string().trim().regex(USER_ID_PATTERN).optional(),
-    /** Instant the subscription runs until (ISO 8601, UTC `Z`). `null` deactivates. */
-    expiresAt: z.string().datetime().nullable(),
-    /** Informational provider status, e.g. 'active' or 'past_due'. */
-    status: z.string().trim().min(1).max(64).optional(),
-    /** Informational plan name. */
-    plan: z.string().trim().min(1).max(64).optional(),
-  })
-  .strict()
-  .refine((body) => IDENTIFIER_FIELDS.filter((field) => body[field] != null).length === 1, {
-    message: 'Exactly one of email or userId must be provided',
-  });
+export const subscriptionSyncBodySchema: z.ZodType<SubscriptionSyncBody> =
+  subscriptionIdentifierSchema
+    .extend({
+      /** Instant the subscription runs until (ISO 8601, UTC `Z`). `null` deactivates. */
+      expiresAt: z.string().datetime().nullable(),
+      /** Informational provider status, e.g. 'active' or 'past_due'. */
+      status: z.string().trim().min(1).max(64).optional(),
+      /** Informational plan name. */
+      plan: z.string().trim().min(1).max(64).optional(),
+    })
+    .strict()
+    .refine(hasExactlyOneSubscriptionIdentifier, { message: exactlyOneIdentifierMessage });
 
-type SyncUser = { _id: { toString(): string } | string };
-
-export interface SubscriptionSyncDeps {
-  findUser: (criteria: { email: string }) => Promise<SyncUser | null>;
-  getUserById: (userId: string) => Promise<SyncUser | null>;
+export interface SubscriptionSyncDeps extends SubscriptionUserLookupDeps {
   updateUser: (
     userId: string,
     updateData: Record<string, unknown>,
@@ -62,14 +52,6 @@ export interface SubscriptionSyncDeps {
 export type SubscriptionSyncResult =
   | { ok: true; value: { userId: string; active: boolean; expiresAt: string | null } }
   | { ok: false; error: { code: 'invalid_body' | 'user_not_found'; status: 400 | 404 } };
-
-const resolveUserId = (user: SyncUser | null): string | null => {
-  const id = user?._id;
-  if (id == null) {
-    return null;
-  }
-  return typeof id === 'string' ? id : id.toString();
-};
 
 /**
  * Writes one user's externally-owned subscription state.
@@ -89,13 +71,9 @@ export async function syncSubscription(
   if (!parsed.success) {
     return { ok: false, error: { code: 'invalid_body', status: 400 } };
   }
-  const { email, userId, expiresAt, status, plan } = parsed.data;
+  const { expiresAt, status, plan } = parsed.data;
 
-  const user =
-    email != null
-      ? await runAsSystem(() => deps.findUser({ email }))
-      : await runAsSystem(() => deps.getUserById(userId as string));
-  const resolvedId = resolveUserId(user);
+  const resolvedId = await resolveSubscriptionUserId(deps, parsed.data);
   if (resolvedId == null) {
     return { ok: false, error: { code: 'user_not_found', status: 404 } };
   }
@@ -137,10 +115,10 @@ export interface SubscriptionSyncAuthDeps {
 const bearerPattern = /^bearer\s+(.+)$/i;
 
 /**
- * Shared-secret bearer auth for the sync endpoint, following the METRICS_SECRET
+ * Shared-secret bearer auth for the subscription endpoints, following the METRICS_SECRET
  * pattern. SHA-256 digests are compared with `timingSafeEqual`, so the comparison
  * leaks neither the secret's value nor its length. Without a configured secret the
- * endpoint answers 404, so the feature is fully off rather than half-open.
+ * endpoints answer 404, so the feature is fully off rather than half-open.
  */
 export function createSubscriptionSyncAuth(
   deps: SubscriptionSyncAuthDeps,

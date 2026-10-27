@@ -2,10 +2,14 @@ import { ErrorTypes, SystemRoles } from 'librechat-data-provider';
 import type { NextFunction, Request, Response } from 'express';
 import type { SubscriptionGateDeps } from './gate';
 import {
+  addSubscriptionBalance,
   createSubscriptionGate,
   createSubscriptionSyncAuth,
+  hasExactlyOneSubscriptionIdentifier,
   isSubscriptionActive,
   isSubscriptionGatedRequest,
+  subscriptionIdentifierSchema,
+  subscriptionSyncBodySchema,
   syncSubscription,
 } from './index';
 
@@ -384,5 +388,149 @@ describe('createSubscriptionSyncAuth', () => {
     const { res } = asResponse();
     auth(asRequest({ headers: { authorization: 'Bearer secret' } }), res, next);
     expect(next).toHaveBeenCalled();
+  });
+});
+
+describe('shared identifier contract', () => {
+  it('accepts each identifier alone and rejects both-or-neither', () => {
+    expect(subscriptionSyncBodySchema.safeParse({ email: 'a@b.co', expiresAt: null }).success).toBe(
+      true,
+    );
+    expect(
+      subscriptionSyncBodySchema.safeParse({
+        userId: '507f1f77bcf86cd799439011',
+        expiresAt: null,
+      }).success,
+    ).toBe(true);
+    expect(
+      subscriptionSyncBodySchema.safeParse({
+        email: 'a@b.co',
+        userId: '507f1f77bcf86cd799439011',
+        expiresAt: null,
+      }).success,
+    ).toBe(false);
+    expect(subscriptionSyncBodySchema.safeParse({ expiresAt: null }).success).toBe(false);
+  });
+
+  it('names the same identifier fields as the balance schema', () => {
+    expect(Object.keys(subscriptionIdentifierSchema.shape)).toEqual(['email', 'userId']);
+    expect(hasExactlyOneSubscriptionIdentifier({ email: 'a@b.co' })).toBe(true);
+    expect(
+      hasExactlyOneSubscriptionIdentifier({ email: 'a@b.co', userId: 'x'.repeat(24) }),
+    ).toBe(false);
+  });
+});
+
+describe('addSubscriptionBalance', () => {
+  const buildDeps = (
+    addCreditsImpl: () => Promise<{ balance?: number } | undefined> = async () => ({
+      balance: 5000,
+    }),
+  ) => ({
+    findUser: jest.fn(async () => ({ _id: { toString: () => 'user1' } })),
+    getUserById: jest.fn(async () => ({ _id: { toString: () => 'user1' } })),
+    addCredits: jest.fn(addCreditsImpl),
+    isBalanceEnabled: jest.fn(() => true),
+  });
+
+  it('credits the amount through a ledger transaction and reports the new total', async () => {
+    const deps = buildDeps();
+    const result = await addSubscriptionBalance(deps, {
+      email: 'user@example.com',
+      amount: 1000,
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      value: { userId: 'user1', added: 1000, tokenCredits: 5000 },
+    });
+    expect(deps.addCredits).toHaveBeenCalledWith(
+      expect.objectContaining({
+        user: 'user1',
+        tokenType: 'credits',
+        context: 'purchase',
+        rawAmount: 1000,
+        balance: { enabled: true },
+      }),
+    );
+  });
+
+  it('honors a caller-supplied context label', async () => {
+    const deps = buildDeps();
+    await addSubscriptionBalance(deps, {
+      userId: '507f1f77bcf86cd799439011',
+      amount: 500,
+      context: 'topup_plan_pro',
+    });
+    expect(deps.addCredits).toHaveBeenCalledWith(
+      expect.objectContaining({ context: 'topup_plan_pro' }),
+    );
+  });
+
+  it('rejects non-positive, fractional, oversized, and non-numeric amounts', async () => {
+    const deps = buildDeps();
+    for (const amount of [0, -100, 12.5, 1e10, '1000']) {
+      const result = await addSubscriptionBalance(deps, { email: 'u@example.com', amount });
+      expect(result).toEqual({ ok: false, error: { code: 'invalid_body', status: 400 } });
+    }
+    expect(deps.addCredits).not.toHaveBeenCalled();
+  });
+
+  it('rejects both-or-neither identifiers and unknown fields as invalid_body', async () => {
+    const deps = buildDeps();
+    const both = await addSubscriptionBalance(deps, {
+      email: 'u@example.com',
+      userId: '507f1f77bcf86cd799439011',
+      amount: 100,
+    });
+    const neither = await addSubscriptionBalance(deps, { amount: 100 });
+    const extra = await addSubscriptionBalance(deps, {
+      email: 'u@example.com',
+      amount: 100,
+      expiresAt: null,
+    });
+    expect(both).toEqual({ ok: false, error: { code: 'invalid_body', status: 400 } });
+    expect(neither).toEqual({ ok: false, error: { code: 'invalid_body', status: 400 } });
+    expect(extra).toEqual({ ok: false, error: { code: 'invalid_body', status: 400 } });
+  });
+
+  it('reports an unknown user as user_not_found', async () => {
+    const deps = buildDeps();
+    deps.findUser.mockResolvedValue(null);
+    const result = await addSubscriptionBalance(deps, {
+      email: 'gone@example.com',
+      amount: 100,
+    });
+    expect(result).toEqual({ ok: false, error: { code: 'user_not_found', status: 404 } });
+    expect(deps.addCredits).not.toHaveBeenCalled();
+  });
+
+  it('refuses to credit when the deployment has balance disabled', async () => {
+    const deps = buildDeps();
+    deps.isBalanceEnabled.mockReturnValue(false);
+    const result = await addSubscriptionBalance(deps, {
+      email: 'user@example.com',
+      amount: 100,
+    });
+    expect(result).toEqual({ ok: false, error: { code: 'balance_disabled', status: 409 } });
+    expect(deps.addCredits).not.toHaveBeenCalled();
+  });
+
+  it('reports a declined or throwing charge as add_balance_failed without inventing a total', async () => {
+    const throwing = buildDeps(async () => {
+      throw new Error('db down');
+    });
+    const failed = await addSubscriptionBalance(throwing, {
+      email: 'user@example.com',
+      amount: 100,
+    });
+    expect(failed).toEqual({ ok: false, error: { code: 'add_balance_failed', status: 500 } });
+
+    const declining = buildDeps(async () => ({ balance: undefined }));
+    const declined = await addSubscriptionBalance(declining, {
+      email: 'user@example.com',
+      amount: 100,
+    });
+    expect(declined).toEqual({ ok: false, error: { code: 'add_balance_failed', status: 500 } });
   });
 });
