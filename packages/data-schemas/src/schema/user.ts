@@ -187,6 +187,30 @@ const userSchema: Schema<IUser> = new Schema<IUser>(
       },
       default: {},
     },
+    /** Externally owned subscription state, written only by the sync endpoint
+     *  (packages/api/src/subscription). `expiresAt` is the source of truth: no
+     *  future instant means no active subscription (fail-closed). Default-selected
+     *  so the request-path gate reads it from the authenticated user document. */
+    subscription: {
+      type: {
+        expiresAt: {
+          type: Date,
+          default: null,
+        },
+        status: {
+          type: String,
+          maxlength: 64,
+        },
+        plan: {
+          type: String,
+          maxlength: 64,
+        },
+        syncedAt: {
+          type: Date,
+        },
+      },
+      default: {},
+    },
     favorites: {
       type: [
         {

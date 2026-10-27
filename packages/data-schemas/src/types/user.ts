@@ -77,6 +77,13 @@ export interface IUser extends Document {
     memories?: boolean;
     statefulCodeEnvironment?: StatefulCodeEnvironment;
   };
+  /** Externally owned subscription state; `expiresAt` is the source of truth. */
+  subscription?: {
+    expiresAt?: Date | null;
+    status?: string;
+    plan?: string;
+    syncedAt?: Date;
+  };
   favorites?: TUserFavorite[];
   /** Display order for the sidebar's Pinned section: favorite and pinned-chat
    *  entry keys interleaved (`agent:`, `spec:`, `model:`, `convo:` prefixes). */

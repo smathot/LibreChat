@@ -910,6 +910,7 @@
   "com_nav_language": "Language",
   "com_nav_latex_parsing": "Parsing LaTeX in messages (may affect performance)",
   "com_nav_log_out": "Log out",
+  "com_nav_extra_credits": "Buy extra credits",
   "com_nav_long_audio_warning": "Longer texts will take longer to process.",
   "com_nav_maximize_chat_space": "Maximize chat space",
   "com_nav_mcp_access_revoked": "MCP server access revoked successfully.",
@@ -3405,5 +3406,7 @@
   "com_ui_tool_approval_connection_unavailable": "Approval cannot be remembered for this connection. Each call requires review.",
   "com_ui_tool_approval_remember_disabled": "Remembered approvals are disabled. Each call requires review.",
   "com_ui_tool_approval_storage_unavailable": "Remembered approval is unavailable. This approval will apply only to this call.",
-  "com_ui_tool_approval_background_unavailable": "Background launches cannot teach approval. Approve a successful foreground call to remember this tool."
+  "com_ui_tool_approval_background_unavailable": "Background launches cannot teach approval. Approve a successful foreground call to remember this tool.",
+  "com_error_subscription_inactive": "An active subscription is required to chat. Reactivate your subscription to continue.",
+  "com_error_subscription_manage": "Manage subscription"
 }

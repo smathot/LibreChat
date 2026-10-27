@@ -35,6 +35,7 @@ const { logger } = require('@librechat/data-schemas');
 const {
   uaParser,
   checkBan,
+  checkSubscription,
   moderateText,
   requireJwtAuth,
   messageIpLimiter,
@@ -173,6 +174,7 @@ router.use(
   unless((req) => !isPrivateTextChatSubmission(req), privateTextIngress),
 );
 router.use(checkBan);
+router.use(checkSubscription);
 router.use(uaParser);
 
 /**

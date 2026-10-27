@@ -16,4 +16,13 @@ describe('userSchema', () => {
       expect(update).toEqual(changedAt);
     });
   });
+
+  describe('subscription', () => {
+    it('stores the externally synced state with a Date expiresAt', () => {
+      const expiresAt = userSchema.path('subscription.expiresAt');
+
+      expect(expiresAt).toBeDefined();
+      expect(expiresAt.instance).toBe('Date');
+    });
+  });
 });

@@ -4894,6 +4894,10 @@ export enum ErrorTypes {
    * A manual compaction whose summarizer produced nothing; history is untouched
    */
   COMPACTION_FAILED = 'compaction_failed',
+  /**
+   * Chat denied because the account has no active subscription
+   */
+  SUBSCRIPTION_INACTIVE = 'subscription_inactive',
 }
 
 /**

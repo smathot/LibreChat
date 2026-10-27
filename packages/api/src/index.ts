@@ -95,6 +95,8 @@ export * from './skills';
 export * from './favorites';
 /* User */
 export * from './user';
+/* Subscription */
+export * from './subscription';
 /* Agent Plugins */
 export * from './plugins';
 /* Endpoints */
